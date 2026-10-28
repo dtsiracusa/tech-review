@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="referrer" content="no-referrer">
+  <title>Wieland Healthcare — Tech Review</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 12px 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.10);
+      max-width: 900px;
+      width: 96%;
+      overflow: hidden;
+    }
+    .card-header { padding: 22px 16px 14px; text-align: center; }
+    .icon { font-size: 36px; }
+    .card-header h1 { margin: 8px 0 0; font-size: 21px; color: #212121; }
+    .logo { width: 100%; max-width: 160px; height: auto; margin-bottom: 8px; }
+    .card-body { padding: 16px 14px; color: #555; font-size: 15px; line-height: 1.5; }
+    .card-footer { padding: 14px 14px 22px; text-align: center; border-top: 1px solid #eee; }
+    .ready .card-header, .loading .card-header, .info .card-header { background: #e3f2fd; }
+    .ready .icon, .loading .icon, .info .icon { color: #1565c0; }
+    .success .card-header { background: #e8f5e9; }
+    .success .icon { color: #2e7d32; }
+    .fail .card-header { background: #fce4ec; }
+    .fail .icon { color: #c62828; }
+    .message { font-size: 16px; text-align: center; margin: 0 0 8px; white-space: pre-line; }
+    .btn {
+      display: inline-block;
+      padding: 12px 28px;
+      color: #fff;
+      background: #1565c0;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn:disabled { opacity: 0.45; cursor: default; }
+    .btn:focus-visible, input:focus-visible, a:focus-visible {
+      outline: 3px solid #90caf9;
+      outline-offset: 2px;
+    }
+    .btn-secondary { background: #9e9e9e; margin-right: 8px; }
+    .btn-outline { background: #fff; color: #1565c0; border: 1px solid #1565c0; }
+    .spinner {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border: 4px solid #ccc;
+      border-top: 4px solid #1565c0;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px 12px;
+      flex-wrap: wrap;
+      font-size: 14px;
+    }
+    .toolbar strong { color: #212121; }
+    .counts { font-size: 14px; color: #555; margin: 8px 0 12px; }
+    .item {
+      border: 1px solid #e0e0e0;
+      border-left: 6px solid var(--gc, #e0e0e0);
+      border-radius: 8px;
+      padding: 36px 12px 12px;
+      margin-bottom: 12px;
+      position: relative;
+    }
+    .item.disabled { background: #fafafa; color: #9e9e9e; }
+    .item.disabled .cs-tab, .item.disabled .chip { opacity: .55; }
+    .cs-tab {
+      position: absolute;
+      top: 0;
+      right: 0;
+      max-width: 80%;
+      padding: 4px 12px;
+      border-radius: 0 7px 0 10px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cs-tab span {
+      display: block;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      opacity: .85;
+    }
+    .item-head { display: flex; flex-direction: column; gap: 2px; }
+    .soldto { font-size: 16px; font-weight: 600; color: #212121; }
+    .item.disabled .soldto { color: #9e9e9e; }
+    .city { font-size: 14px; }
+    .item-name { font-size: 17px; font-weight: 600; color: #212121; }
+    .item.disabled .item-name { color: #9e9e9e; }
+    .item-name a { color: inherit; }
+    .label {
+      color: #9e9e9e;
+      display: block;
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+    .chips {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px 12px;
+      margin-top: 10px;
+    }
+    .chip {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: 10px;
+      background: #c4c4c4;
+      color: #212121;
+    }
+    .vals {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 12px;
+      font-size: 14px;
+      margin-top: 10px;
+      word-break: break-word;
+    }
+    .vals .wide { grid-column: 1 / -1; }
+    .vals a { color: #1565c0; }
+    .notes { font-size: 14px; margin-top: 10px; white-space: pre-wrap; word-break: break-word; }
+    .choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 6px; margin-top: 12px; }
+    .choices label {
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 10px 8px;
+      font-size: 15px;
+      cursor: pointer;
+      user-select: none;
+      text-align: center;
+    }
+    .choices input { margin: 0 6px 0 0; }
+    .choices label.on-approve { background: #e8f5e9; border-color: #2e7d32; }
+    .choices label.on-issue { background: #fce4ec; border-color: #c62828; }
+    .note { font-size: 13px; margin-top: 10px; color: #616161; }
+    .note.warn { color: #ad1457; }
+    .bulk { text-align: center; margin: 4px 0 4px; }
+    .result-row {
+      border-left: 4px solid #9e9e9e;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      background: #fafafa;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .result-row.ok { border-color: #2e7d32; }
+    .result-row.partial { border-color: #ef6c00; }
+    .result-row.failed { border-color: #c62828; }
+    .result-row.skipped { border-color: #9e9e9e; }
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      display: none;
+      justify-content: center;
+      align-items: flex-start;
+      overflow-y: auto;
+      z-index: 1000;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 12px;
+      max-width: 520px;
+      width: 92%;
+      margin: 24px auto;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+    }
+    .modal h2 {
+      margin: 0;
+      padding: 16px 20px;
+      font-size: 18px;
+      color: #212121;
+      border-bottom: 1px solid #eee;
+    }
+    .modal-body { padding: 14px 20px; font-size: 14px; color: #444; line-height: 1.5; }
+    .modal-body ul { margin: 6px 0 12px; padding-left: 20px; }
+    .modal-footer { padding: 12px 20px 16px; text-align: right; border-top: 1px solid #eee; }
+    .modal-footer .btn { font-size: 15px; padding: 10px 22px; }
+    .hidden { display: none !important; }
+    @media (min-width: 700px) {
+      body { padding: 24px 0; }
+      .card-body { padding: 20px 24px; }
+      .item { padding: 12px 14px; }
+      .item-head { padding-right: 200px; }
+      .cs-tab { max-width: 200px; }
+      .chips { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .vals { grid-template-columns: repeat(4, minmax(0, 1fr)); font-size: 13px; }
+      .vals .wide { grid-column: span 2; }
+      .notes { font-size: 13px; }
+      .choices { display: flex; flex-wrap: wrap; }
+      .choices label { padding: 6px 12px; font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card loading" id="card">
+    <div class="card-header">
+      <!-- PASTE LOGO SVG HERE -->
+      <div class="icon" id="icon">
+        <div class="spinner"></div>
+      </div>
+      <h1 id="title">Loading...</h1>
+    </div>
+    <div class="card-body">
+      <p class="message" id="message">Please wait while the items are loaded.</p>
+      <div id="review" class="hidden">
+        <div class="toolbar">
+          <div>Tech: <strong id="techName"></strong></div>
+          <div>Week of: <strong id="weekOf"></strong></div>
+        </div>
+        <p class="counts" id="counts" aria-live="polite"></p>
+        <div id="itemList"></div>
+        <div class="bulk">
+          <button type="button" class="btn btn-outline" id="approveAllBtn">Approve All</button>
+        </div>
+      </div>
+      <div id="results" class="hidden"></div>
+    </div>
+    <div class="card-footer" id="footer">
+      <button type="button" class="btn hidden" id="reviewBtn" disabled>Review &amp; Confirm</button>
+      <button type="button" class="btn hidden" id="backBtn">Back to Items</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="modal">
+      <h2 id="confirmTitle">Confirm Changes</h2>
+      <div class="modal-body" id="confirmBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
+        <button type="button" class="btn" id="submitBtn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // UPDATE THIS to the Tech Review Apps Script deployment URL (/exec).
+    var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz50CyFp7_A2fWJkc7Ozt6hu1P_NtpawArC-xUhF23vkKSl601wZxFXbcLlUoXK0WbzrQ/exec";
+    var LOAD_TIMEOUT_MS = 60000;
+    var SUBMIT_TIMEOUT_MS = 180000;
+
+    // Column placement on the card (IDs from tech_columns.txt)
+    var COLOR_COL = "color_mkzwg28s";          // left border
+    var PARTS_COL = "color_mm1jzrpg";          // top-right tab (Parts Ready)
+    var TA_COL = "color_mm8dp78e";             // Tech Approved
+    var SOLD_TO_COL = "text_mm1b4w1t";         // header
+    var CITY_COL = "text_mm1dy2mz";            // header
+    var CHIP_COLS = ["color_mm8dp78e", "color_mm25pxwa"];
+    // Field grid, left to right (2 per row on phones, 4 per row on wider screens)
+    var GRID_COLS = [
+      "date_mm07cg6e", "text_mm0ghcqd", "location_mkzv8fpv",
+      "text_mm1z93ap", "text_mm25mb67",
+      "text_mm2d9dby", "phone_mm2cz2nr",
+      "text_mm6bsqmj", "phone_mm2esv7g",
+      "text_mm6dtr7m", "phone_mm6dsdnq"
+    ];
+    var WIDE_COLS = ["text_mm0ghcqd", "location_mkzv8fpv"];   // span 2 grid cells
+    var NOTE_COLS = ["text_mkzvy6d3", "long_text_mm2cz7x7", "long_text_mm1tfndn"];
+
+    var APPROVED = "Approved", ISSUE = "Issue", NOT_YET = "Not Yet";
+
+    var KEY = new URLSearchParams(window.location.search).get("k") || "";
+    var SESSION = "S" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    var data = null;      // last load response
+    var choices = {};     // itemId -> "leave" | "approve" | "issue"
+    var busy = false;
+
+    var $ = function (id) { return document.getElementById(id); };
+
+    // ---------- JSONP ----------
+    var jsonpSeq = 0;
+    function callApi(query, timeoutMs, done) {
+      var name = "trCb" + (++jsonpSeq) + "_" + Date.now();
+      var finished = false;
+      var script = document.createElement("script");
+      var timer = setTimeout(function () {
+        end({
+          success: false, title: "Taking Too Long",
+          message: "The service didn't respond. Reload the page to see the current state before trying again."
+        });
+      }, timeoutMs);
+      function end(res) {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        try { delete window[name]; } catch (e) { window[name] = undefined; }
+        if (script.parentNode) script.parentNode.removeChild(script);
+        done(res || { success: false, title: "Error", message: "Empty response." });
+      }
+      window[name] = end;
+      script.src = APPS_SCRIPT_URL + "?" + query + "&k=" + encodeURIComponent(KEY) +
+        "&callback=" + name + "&_=" + Date.now();
+      script.onerror = function () {
+        end({ success: false, title: "Error", message: "Couldn't reach the service. Try again in a few minutes." });
+      };
+      document.body.appendChild(script);
+    }
+
+    // ---------- Helpers ----------
+    function setState(cls, icon, title, message) {
+      $("card").className = "card " + cls;
+      $("icon").innerHTML = icon;     // icon is always a fixed literal in this file
+      $("title").textContent = title;
+      $("message").textContent = message || "";
+      $("message").classList.toggle("hidden", !message);
+      document.title = title + " — Wieland Healthcare";
+    }
+    function spinner(title, msg) { setState("loading", '<div class="spinner"></div>', title, msg); }
+
+    function el(tag, cls, text) {
+      var e = document.createElement(tag);
+      if (cls) e.className = cls;
+      if (text !== undefined && text !== null) e.textContent = text;
+      return e;
+    }
+    function link(text, url) {
+      if (!url) return document.createTextNode(text);
+      var a = el("a", null, text); a.href = url; a.target = "_blank"; a.rel = "noopener"; return a;
+    }
+    function validHex(h) { return /^#[0-9a-f]{6}$/i.test(h || ""); }
+    function textOn(hex) {
+      var n = parseInt(hex.slice(1), 16);
+      var lum = 0.299 * (n >> 16 & 255) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255);
+      return lum > 160 ? "#212121" : "#ffffff";
+    }
+    function fieldMap(it) {
+      var m = {};
+      it.fields.forEach(function (f) { m[f.id] = f; });
+      return m;
+    }
+    function dash(t) { return (t && String(t).trim()) ? t : "-"; }
+    // "2169785423" or "12169785423" -> "+1(216)978-5423"; anything else is returned unchanged
+    function fmtPhone(t) {
+      var raw = String(t || "").trim();
+      var d = raw.replace(/\D/g, "");
+      if (d.length === 11 && d.charAt(0) === "1") d = d.slice(1);
+      if (d.length !== 10) return raw;
+      return "+1(" + d.slice(0, 3) + ")" + d.slice(3, 6) + "-" + d.slice(6);
+    }
+    // Tap-to-call link for 10/11-digit US numbers; plain text otherwise
+    function phoneNode(t) {
+      var raw = String(t || "").trim();
+      var d = raw.replace(/\D/g, "");
+      if (d.length === 11 && d.charAt(0) === "1") d = d.slice(1);
+      if (d.length !== 10) return document.createTextNode(dash(raw));
+      var a = el("a", null, fmtPhone(raw));
+      a.href = "tel:+1" + d;
+      return a;
+    }
+
+    // ---------- Load ----------
+    function load() {
+      if (APPS_SCRIPT_URL.indexOf("PASTE") === 0) {
+        setState("fail", "\u2718", "Not Configured", "APPS_SCRIPT_URL has not been set in this page.");
+        return;
+      }
+      if (!KEY) {
+        setState("fail", "\u2718", "Link Not Recognized", "This link is not valid. Use the link from your email.");
+        return;
+      }
+      spinner("Loading...", "Please wait while your items are loaded.");
+      $("review").classList.add("hidden");
+      $("results").classList.add("hidden");
+      $("reviewBtn").classList.add("hidden");
+      $("backBtn").classList.add("hidden");
+      callApi("action=load", LOAD_TIMEOUT_MS, onLoad);
+    }
+
+    function onLoad(res) {
+      if (!res.success) {
+        setState("fail", "\u2718", res.title || "Error", res.message || "");
+        $("backBtn").classList.remove("hidden");
+        return;
+      }
+      if (res.closed) {
+        setState("info", "\u2139", "Review Window Closed", (res.tech ? res.tech + "\n" : "") + res.message);
+        return;
+      }
+      data = res;
+      choices = {};
+      $("techName").textContent = res.tech;
+      $("weekOf").textContent = res.weekOfText;
+      if (!res.items.length) {
+        setState("info", "\u2139", "Tech Review",
+          res.tech + "\nYou have no jobs for the week of " + res.weekOfText + ".");
+        return;
+      }
+      setState("ready", "&#128203;", "Tech Review",
+        "Review each job for the week of " + res.weekOfText + ". Choose Approve or Issue, " +
+        "then select Review & Confirm. This review closes " + res.closesText + ".");
+      renderItems();
+      $("review").classList.remove("hidden");
+      $("reviewBtn").classList.remove("hidden");
+      updateReviewBtn();
+    }
+
+    // ---------- Render ----------
+    function optionsFor(it) {
+      if (it.techApproved === ISSUE) return [["leave", "Leave as is"], ["approve", "Approve"]];
+      return [["leave", "Leave as is"], ["issue", "Issue"], ["approve", "Approve"]];
+    }
+
+    function renderItems() {
+      var list = $("itemList");
+      list.textContent = "";
+      data.items.forEach(function (it) {
+        var f = fieldMap(it);
+        var disabled = !!it.approved;
+        var item = el("div", "item" + (disabled ? " disabled" : ""));
+        if (validHex(it.colorStatusColor)) item.style.setProperty("--gc", it.colorStatusColor);
+
+        // Top-right: Parts Ready tab
+        var pr = f[PARTS_COL] || {};
+        var tab = el("div", "cs-tab");
+        tab.appendChild(el("span", null, "Parts Ready"));
+        tab.appendChild(document.createTextNode(dash(pr.text)));
+        var bg = (pr.text && validHex(pr.color)) ? pr.color : "#c4c4c4";
+        tab.style.background = bg; tab.style.color = textOn(bg);
+        tab.title = "Parts Ready: " + dash(pr.text);
+        item.appendChild(tab);
+
+        // Header: item name (Tech Visit link, else monday item), Sold To, City
+        var head = el("div", "item-head");
+        var n = el("div", "item-name");
+        n.appendChild(link(it.name, it.visitUrl || it.url));
+        n.title = it.visitUrl ? "Open Tech Visit" : "Open in monday";
+        head.appendChild(n);
+        head.appendChild(el("div", "soldto", dash(f[SOLD_TO_COL] && f[SOLD_TO_COL].text)));
+        head.appendChild(el("div", "city", dash(f[CITY_COL] && f[CITY_COL].text)));
+        item.appendChild(head);
+
+        // Status chips
+        var chips = el("div", "chips");
+        CHIP_COLS.forEach(function (id) {
+          var x = f[id]; if (!x) return;
+          var d = el("div");
+          d.appendChild(el("span", "label", x.title));
+          var txt = x.text || (id === TA_COL ? NOT_YET : "");
+          var c = el("span", "chip", dash(txt));
+          if (x.text && validHex(x.color)) { c.style.background = x.color; c.style.color = textOn(x.color); }
+          d.appendChild(c);
+          chips.appendChild(d);
+        });
+        item.appendChild(chips);
+
+        // Field grid
+        var vals = el("div", "vals");
+        GRID_COLS.forEach(function (id) {
+          var x = f[id]; if (!x) return;
+          var d = el("div", WIDE_COLS.indexOf(id) !== -1 ? "wide" : "");
+          d.appendChild(el("span", "label", x.title));
+          if (x.type === "link" && x.url) d.appendChild(link(x.text || x.url, x.url));
+          else if (x.type === "phone") d.appendChild(phoneNode(x.text));
+          else d.appendChild(document.createTextNode(dash(x.text)));
+          vals.appendChild(d);
+        });
+        item.appendChild(vals);
+
+        // Notes (full width)
+        NOTE_COLS.forEach(function (id) {
+          var x = f[id]; if (!x) return;
+          var d = el("div", "notes");
+          d.appendChild(el("span", "label", x.title));
+          d.appendChild(document.createTextNode(dash(x.text)));
+          item.appendChild(d);
+        });
+
+        // Choices or note
+        if (disabled) {
+          item.appendChild(el("div", "note", it.note || "Already Approved."));
+        } else {
+          if (it.note) item.appendChild(el("div", "note warn", it.note));
+          var ch = el("div", "choices");
+          ch.setAttribute("role", "radiogroup");
+          ch.setAttribute("aria-label", "Review for " + it.name);
+          optionsFor(it).forEach(function (o) {
+            var lab = el("label");
+            var r = document.createElement("input");
+            r.type = "radio"; r.name = "ch_" + it.id; r.value = o[0];
+            r.checked = (choices[it.id] || "leave") === o[0];
+            r.addEventListener("change", function () {
+              choices[it.id] = o[0];
+              refreshChoiceStyles(ch);
+              updateReviewBtn();
+            });
+            lab.appendChild(r); lab.appendChild(document.createTextNode(o[1]));
+            ch.appendChild(lab);
+          });
+          refreshChoiceStyles(ch);
+          item.appendChild(ch);
+        }
+        list.appendChild(item);
+      });
+      updateCounts();
+    }
+
+    function refreshChoiceStyles(ch) {
+      Array.prototype.forEach.call(ch.querySelectorAll("label"), function (lab) {
+        var r = lab.querySelector("input");
+        lab.className = !r.checked ? "" : r.value === "approve" ? "on-approve" : r.value === "issue" ? "on-issue" : "";
+      });
+    }
+
+    function available() { return data.items.filter(function (it) { return !it.approved; }); }
+    function picked(kind) { return available().filter(function (it) { return choices[it.id] === kind; }); }
+    function selected() { return picked("approve").concat(picked("issue")); }
+
+    function updateCounts() {
+      if (!data) return;
+      $("counts").textContent = data.items.length + " job(s), " + available().length + " awaiting approval, " +
+        picked("approve").length + " to approve, " + picked("issue").length + " to mark Issue.";
+    }
+    function updateReviewBtn() {
+      $("reviewBtn").disabled = busy || selected().length === 0;
+      $("approveAllBtn").disabled = busy ||
+        available().filter(function (it) { return it.techApproved === NOT_YET; }).length === 0;
+      updateCounts();
+    }
+    // Approve All: Not Yet items only (Issue items are not changed)
+    function approveAll() {
+      available().forEach(function (it) { if (it.techApproved === NOT_YET) choices[it.id] = "approve"; });
+      renderItems();
+      updateReviewBtn();
+    }
+
+    // ---------- Confirm ----------
+    function addList(body, heading, items) {
+      if (!items.length) return;
+      body.appendChild(el("p", null, heading + " (" + items.length + "):"));
+      var ul = el("ul");
+      items.forEach(function (it) {
+        var f = fieldMap(it);
+        var sold = f[SOLD_TO_COL] && f[SOLD_TO_COL].text;
+        ul.appendChild(el("li", null, it.name + (sold ? " \u2014 " + sold : "")));
+      });
+      body.appendChild(ul);
+    }
+    function openConfirm() {
+      var body = $("confirmBody");
+      body.textContent = "";
+      body.appendChild(el("div", null, "Tech: " + data.tech));
+      addList(body, "Set Tech Approved to Approved", picked("approve"));
+      addList(body, "Set Tech Approved to Issue", picked("issue"));
+      body.appendChild(el("div", "note", "Approved is final and cannot be changed from this page."));
+      $("confirmModal").classList.add("open");
+      $("submitBtn").focus();
+    }
+    function closeConfirm() { $("confirmModal").classList.remove("open"); }
+
+    function submit() {
+      if (busy) return;
+      busy = true;
+      closeConfirm();
+      var pairs = picked("approve").map(function (it) { return it.id + ":A"; })
+        .concat(picked("issue").map(function (it) { return it.id + ":I"; }));
+      $("review").classList.add("hidden");
+      $("reviewBtn").classList.add("hidden");
+      spinner("Submitting...", "Updating " + pairs.length + " job(s). This can take a minute; don't close this tab.");
+      callApi("action=commit&ch=" + encodeURIComponent(pairs.join(",")) +
+        "&ss=" + encodeURIComponent(SESSION), SUBMIT_TIMEOUT_MS, onSubmit);
+    }
+
+    function onSubmit(res) {
+      busy = false;
+      if (!res.success) {
+        setState("fail", "\u2718", res.title || "Error", res.message || "");
+        $("backBtn").classList.remove("hidden");
+        return;
+      }
+      var bad = res.results.filter(function (r) { return r.result !== "OK"; }).length;
+      setState(bad ? "info" : "success", bad ? "\u2139" : "\u2714", bad ? "Submitted With Notes" : "Done",
+        bad ? "Some items need attention. Details are below." : "All selected jobs were updated.");
+      var box = $("results");
+      box.textContent = "";
+      res.results.forEach(function (r) {
+        var row = el("div", "result-row " + String(r.result || "").toLowerCase());
+        row.appendChild(el("strong", null, r.name + " \u2014 " + r.action + ": " + r.result));
+        if (r.note) row.appendChild(el("div", "note" + (r.result === "OK" ? "" : " warn"), r.note));
+        box.appendChild(row);
+      });
+      box.classList.remove("hidden");
+      $("backBtn").classList.remove("hidden");
+    }
+
+    // ---------- Init ----------
+    (function init() {
+      $("approveAllBtn").addEventListener("click", approveAll);
+      $("reviewBtn").addEventListener("click", openConfirm);
+      $("cancelBtn").addEventListener("click", closeConfirm);
+      $("submitBtn").addEventListener("click", submit);
+      $("backBtn").addEventListener("click", load);
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && $("confirmModal").classList.contains("open")) closeConfirm();
+      });
+      load();
+    })();
+  </script>
+</body>
+</html>
