@@ -206,6 +206,26 @@
     .modal-footer { padding: 12px 20px 16px; text-align: right; border-top: 1px solid #eee; }
     .modal-footer .btn { font-size: 15px; padding: 10px 22px; }
     .hidden { display: none !important; }
+    .section-head {
+      border-top: 4px solid #212121;
+      margin: 24px 0 12px;
+      padding-top: 10px;
+      font-size: 18px;
+      font-weight: 700;
+      color: #212121;
+    }
+    .section-head:first-child { border-top: none; margin-top: 0; padding-top: 0; }
+    .paired { font-size: 14px; margin-top: 2px; }
+    .banner {
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      color: #5d4037;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 14px;
+      text-align: center;
+      margin-bottom: 12px;
+    }
     @media (min-width: 700px) {
       body { padding: 24px 0; }
       .card-body { padding: 20px 24px; }
@@ -233,9 +253,10 @@
     <div class="card-body">
       <p class="message" id="message">Please wait while the items are loaded.</p>
       <div id="review" class="hidden">
+        <div class="banner hidden" id="banner" aria-live="polite"></div>
         <div class="toolbar">
           <div>Tech: <strong id="techName"></strong></div>
-          <div>Week of: <strong id="weekOf"></strong></div>
+          <div id="weekOfBox">Week of: <strong id="weekOf"></strong></div>
         </div>
         <p class="counts" id="counts" aria-live="polite"></p>
         <div id="itemList"></div>
@@ -270,18 +291,16 @@
 
     // Column placement on the card (IDs from tech_columns.txt)
     var COLOR_COL = "color_mkzwg28s";          // left border
-    var PARTS_COL = "color_mm1jzrpg";          // top-right tab (Parts Ready)
-    var TA_COL = "color_mm8dp78e";             // Tech Approved
+    var PARTS_COL = "color_mm1jzrpg";          // Parts Ready (chip, row 2)
+    var TA_COL = "color_mm8dp78e";             // Tech Approved (top-right tab)
     var SOLD_TO_COL = "text_mm1b4w1t";         // header
     var CITY_COL = "text_mm1dy2mz";            // header
-    var CHIP_COLS = ["color_mm8dp78e", "color_mm25pxwa"];
-    // Field grid, left to right (2 per row on phones, 4 per row on wider screens)
-    var GRID_COLS = [
-      "date_mm07cg6e", "text_mm0ghcqd", "location_mkzv8fpv",
-      "text_mm1z93ap", "text_mm25mb67",
-      "text_mm2d9dby", "phone_mm2cz2nr",
-      "text_mm6bsqmj", "phone_mm2esv7g",
-      "text_mm6dtr7m", "phone_mm6dsdnq"
+    // Field rows, top to bottom. Each row starts on a new line (2 per line on phones, 4 on wider screens).
+    var ROWS = [
+      ["date_mm07cg6e", "text_mm0ghcqd"],
+      ["color_mm1jzrpg", "color_mm25pxwa", "text_mm1z93ap", "text_mm25mb67"],
+      ["location_mkzv8fpv"],
+      ["text_mm2d9dby", "phone_mm2cz2nr", "text_mm6bsqmj", "phone_mm2esv7g", "text_mm6dtr7m", "phone_mm6dsdnq"]
     ];
     var WIDE_COLS = ["text_mm0ghcqd", "location_mkzv8fpv"];   // span 2 grid cells
     var NOTE_COLS = ["text_mkzvy6d3", "long_text_mm2cz7x7", "long_text_mm1tfndn"];
@@ -401,14 +420,29 @@
         $("backBtn").classList.remove("hidden");
         return;
       }
-      if (res.closed) {
-        setState("info", "\u2139", "Review Window Closed", (res.tech ? res.tech + "\n" : "") + res.message);
+      if (res.readOnly) {
+        data = res;
+        choices = {};
+        $("techName").textContent = res.tech;
+        $("weekOfBox").classList.add("hidden");
+        $("approveAllBtn").classList.add("hidden");
+        $("banner").textContent = "View only \u2014 the next review opens " + res.nextOpenText + ".";
+        $("banner").classList.remove("hidden");
+        setState("info", "\u2139", "Tech Review", "");
+        $("counts").textContent = res.sections.map(function (s) {
+          return s.items.length + " job(s) in " + s.title;
+        }).join(", ") + ".";
+        renderSections();
+        $("review").classList.remove("hidden");
         return;
       }
       data = res;
       choices = {};
       $("techName").textContent = res.tech;
       $("weekOf").textContent = res.weekOfText;
+      $("weekOfBox").classList.remove("hidden");
+      $("approveAllBtn").classList.remove("hidden");
+      $("banner").classList.add("hidden");
       if (!res.items.length) {
         setState("info", "\u2139", "Tech Review",
           res.tech + "\nYou have no jobs for the week of " + res.weekOfText + ".");
@@ -429,98 +463,110 @@
       return [["leave", "Leave as is"], ["issue", "Issue"], ["approve", "Approve"]];
     }
 
-    function renderItems() {
-      var list = $("itemList");
-      list.textContent = "";
-      data.items.forEach(function (it) {
-        var f = fieldMap(it);
-        var disabled = !!it.approved;
-        var item = el("div", "item" + (disabled ? " disabled" : ""));
-        if (validHex(it.colorStatusColor)) item.style.setProperty("--gc", it.colorStatusColor);
+    function renderCard(it, readOnly) {
+      var f = fieldMap(it);
+      var disabled = !readOnly && !!it.approved;
+      var item = el("div", "item" + (disabled ? " disabled" : ""));
+      if (validHex(it.colorStatusColor)) item.style.setProperty("--gc", it.colorStatusColor);
 
-        // Top-right: Parts Ready tab
-        var pr = f[PARTS_COL] || {};
-        var tab = el("div", "cs-tab");
-        tab.appendChild(el("span", null, "Parts Ready"));
-        tab.appendChild(document.createTextNode(dash(pr.text)));
-        var bg = (pr.text && validHex(pr.color)) ? pr.color : "#c4c4c4";
-        tab.style.background = bg; tab.style.color = textOn(bg);
-        tab.title = "Parts Ready: " + dash(pr.text);
-        item.appendChild(tab);
+      // Top-right: Tech Approved tab
+      var ta = f[TA_COL] || {};
+      var taText = ta.text || NOT_YET;
+      var tab = el("div", "cs-tab");
+      tab.appendChild(el("span", null, "Tech Approved"));
+      tab.appendChild(document.createTextNode(taText));
+      var bg = (ta.text && validHex(ta.color)) ? ta.color : "#c4c4c4";
+      tab.style.background = bg; tab.style.color = textOn(bg);
+      tab.title = "Tech Approved: " + taText;
+      item.appendChild(tab);
 
-        // Header: item name (Tech Visit link, else monday item), Sold To, City
-        var head = el("div", "item-head");
-        var n = el("div", "item-name");
-        n.appendChild(link(it.name, it.visitUrl || it.url));
-        n.title = it.visitUrl ? "Open Tech Visit" : "Open in monday";
-        head.appendChild(n);
-        head.appendChild(el("div", "soldto", dash(f[SOLD_TO_COL] && f[SOLD_TO_COL].text)));
-        head.appendChild(el("div", "city", dash(f[CITY_COL] && f[CITY_COL].text)));
-        item.appendChild(head);
+      // Header: item name (Tech Visit link, else monday item), Sold To, City, Paired with
+      var head = el("div", "item-head");
+      var n = el("div", "item-name");
+      n.appendChild(link(it.name, it.visitUrl || it.url));
+      n.title = it.visitUrl ? "Open Tech Visit" : "Open in monday";
+      head.appendChild(n);
+      head.appendChild(el("div", "soldto", dash(f[SOLD_TO_COL] && f[SOLD_TO_COL].text)));
+      head.appendChild(el("div", "city", dash(f[CITY_COL] && f[CITY_COL].text)));
+      if (it.paired && it.paired.length) {
+        head.appendChild(el("div", "paired", "Paired with: " + it.paired.join(", ")));
+      }
+      item.appendChild(head);
 
-        // Status chips
-        var chips = el("div", "chips");
-        CHIP_COLS.forEach(function (id) {
-          var x = f[id]; if (!x) return;
-          var d = el("div");
-          d.appendChild(el("span", "label", x.title));
-          var txt = x.text || (id === TA_COL ? NOT_YET : "");
-          var c = el("span", "chip", dash(txt));
-          if (x.text && validHex(x.color)) { c.style.background = x.color; c.style.color = textOn(x.color); }
-          d.appendChild(c);
-          chips.appendChild(d);
-        });
-        item.appendChild(chips);
-
-        // Field grid
+      // Field rows
+      ROWS.forEach(function (row) {
         var vals = el("div", "vals");
-        GRID_COLS.forEach(function (id) {
+        row.forEach(function (id) {
           var x = f[id]; if (!x) return;
           var d = el("div", WIDE_COLS.indexOf(id) !== -1 ? "wide" : "");
           d.appendChild(el("span", "label", x.title));
-          if (x.type === "link" && x.url) d.appendChild(link(x.text || x.url, x.url));
+          if (x.type === "status") {
+            var c = el("span", "chip", dash(x.text));
+            if (x.text && validHex(x.color)) { c.style.background = x.color; c.style.color = textOn(x.color); }
+            d.appendChild(c);
+          }
+          else if (x.type === "link" && x.url) d.appendChild(link(x.text || x.url, x.url));
           else if (x.type === "phone") d.appendChild(phoneNode(x.text));
           else d.appendChild(document.createTextNode(dash(x.text)));
           vals.appendChild(d);
         });
         item.appendChild(vals);
-
-        // Notes (full width)
-        NOTE_COLS.forEach(function (id) {
-          var x = f[id]; if (!x) return;
-          var d = el("div", "notes");
-          d.appendChild(el("span", "label", x.title));
-          d.appendChild(document.createTextNode(dash(x.text)));
-          item.appendChild(d);
-        });
-
-        // Choices or note
-        if (disabled) {
-          item.appendChild(el("div", "note", it.note || "Already Approved."));
-        } else {
-          if (it.note) item.appendChild(el("div", "note warn", it.note));
-          var ch = el("div", "choices");
-          ch.setAttribute("role", "radiogroup");
-          ch.setAttribute("aria-label", "Review for " + it.name);
-          optionsFor(it).forEach(function (o) {
-            var lab = el("label");
-            var r = document.createElement("input");
-            r.type = "radio"; r.name = "ch_" + it.id; r.value = o[0];
-            r.checked = (choices[it.id] || "leave") === o[0];
-            r.addEventListener("change", function () {
-              choices[it.id] = o[0];
-              refreshChoiceStyles(ch);
-              updateReviewBtn();
-            });
-            lab.appendChild(r); lab.appendChild(document.createTextNode(o[1]));
-            ch.appendChild(lab);
-          });
-          refreshChoiceStyles(ch);
-          item.appendChild(ch);
-        }
-        list.appendChild(item);
       });
+
+      // Notes (full width)
+      NOTE_COLS.forEach(function (id) {
+        var x = f[id]; if (!x) return;
+        var d = el("div", "notes");
+        d.appendChild(el("span", "label", x.title));
+        d.appendChild(document.createTextNode(dash(x.text)));
+        item.appendChild(d);
+      });
+
+      // Choices or note
+      if (readOnly) {
+        if (it.note) item.appendChild(el("div", "note", it.note));
+      } else if (disabled) {
+        item.appendChild(el("div", "note", it.note || "Already Approved."));
+      } else {
+        if (it.note) item.appendChild(el("div", "note warn", it.note));
+        var ch = el("div", "choices");
+        ch.setAttribute("role", "radiogroup");
+        ch.setAttribute("aria-label", "Review for " + it.name);
+        optionsFor(it).forEach(function (o) {
+          var lab = el("label");
+          var r = document.createElement("input");
+          r.type = "radio"; r.name = "ch_" + it.id; r.value = o[0];
+          r.checked = (choices[it.id] || "leave") === o[0];
+          r.addEventListener("change", function () {
+            choices[it.id] = o[0];
+            refreshChoiceStyles(ch);
+            updateReviewBtn();
+          });
+          lab.appendChild(r); lab.appendChild(document.createTextNode(o[1]));
+          ch.appendChild(lab);
+        });
+        refreshChoiceStyles(ch);
+        item.appendChild(ch);
+      }
+      return item;
+    }
+
+    function renderItems() {
+      var list = $("itemList");
+      list.textContent = "";
+      data.items.forEach(function (it) { list.appendChild(renderCard(it, false)); });
       updateCounts();
+    }
+
+    // Read-only: one section per group, thick line + header between them
+    function renderSections() {
+      var list = $("itemList");
+      list.textContent = "";
+      data.sections.forEach(function (s) {
+        list.appendChild(el("h2", "section-head", s.title + " (" + s.items.length + ")"));
+        if (!s.items.length) list.appendChild(el("p", "note", "No jobs."));
+        s.items.forEach(function (it) { list.appendChild(renderCard(it, true)); });
+      });
     }
 
     function refreshChoiceStyles(ch) {
