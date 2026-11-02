@@ -115,7 +115,38 @@
     .city { font-size: 14px; }
     .item-name { font-size: 17px; font-weight: 600; color: #212121; }
     .item.disabled .item-name { color: #9e9e9e; }
-    .item-name a { color: inherit; }
+    .item-name a {
+      color: inherit;
+    }
+    .caret {
+      position: absolute;
+      top: 4px;
+      left: 6px;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: #616161;
+      font-size: 18px;
+      line-height: 28px;
+      cursor: pointer;
+      transition: transform .15s;
+    }
+    .caret:hover {
+      background: #eeeeee;
+    }
+    .caret:focus-visible {
+      outline: 3px solid #90caf9;
+      outline-offset: 2px;
+    }
+    .item.collapsed .caret {
+      transform: rotate(-90deg);
+    }
+    .item.collapsed .item-body {
+      display: none;
+    }
     .label {
       color: #9e9e9e;
       display: block;
@@ -248,7 +279,16 @@
       .soldto { font-size: calc(16 * var(--u)); }
       .city { font-size: calc(14 * var(--u)); }
       .paired { font-size: calc(14 * var(--u)); }
-      .item-name { font-size: calc(17 * var(--u)); }
+      .item-name {
+        font-size: calc(17 * var(--u));
+      }
+      .caret {
+        width: calc(28 * var(--u));
+        height: calc(28 * var(--u));
+        line-height: calc(28 * var(--u));
+        font-size: calc(18 * var(--u));
+      }
+
       .label { font-size: calc(11 * var(--u)); }
       .chip { font-size: calc(12 * var(--u)); }
       .vals { font-size: calc(14 * var(--u)); }
@@ -267,7 +307,16 @@
       body { padding: 24px 0; }
       .card-body { padding: 20px 24px; }
       .item { padding: 12px 14px; }
-      .item-head { padding-right: 200px; }
+      .item-head {
+        padding-right: 200px;
+      }
+      .item.has-caret .item-head {
+        padding-left: 34px;
+      }
+      .caret {
+        top: 8px;
+        left: 8px;
+      }
       .cs-tab { max-width: 200px; }
       .chips { grid-template-columns: repeat(4, minmax(0, 1fr)); }
       .vals { grid-template-columns: repeat(4, minmax(0, 1fr)); font-size: 13px; }
@@ -332,6 +381,8 @@
     var TA_COL = "color_mm8dp78e";             // Tech Approved (top-right tab)
     var SOLD_TO_COL = "text_mm1b4w1t";         // header
     var CITY_COL = "text_mm1dy2mz";            // header
+    var ORDER_STATUS_COL = "color_mm1vcdbq";   // read-only: caret shown only when this is REPORTED
+    var REPORTED = "Reported";
     // Field rows, top to bottom. Each row starts on a new line (2 per line on phones, 4 on wider screens).
     var ROWS = [
       ["date_mm07cg6e", "text_mm0ghcqd"],
@@ -348,6 +399,7 @@
     var SESSION = "S" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     var data = null;      // last load response
     var choices = {};     // itemId -> "leave" | "approve" | "issue"
+    var collapsed = {};   // itemId -> true when the card is collapsed
     var busy = false;
 
     var $ = function (id) { return document.getElementById(id); };
@@ -460,6 +512,7 @@
       if (res.readOnly) {
         data = res;
         choices = {};
+        collapsed = {};
         $("techName").textContent = res.tech;
         $("weekOfBox").classList.add("hidden");
         $("approveAllBtn").classList.add("hidden");
@@ -475,6 +528,7 @@
       }
       data = res;
       choices = {};
+      collapsed = {};
       $("techName").textContent = res.tech;
       $("weekOf").textContent = res.weekOfText;
       $("weekOfBox").classList.remove("hidden");
@@ -496,8 +550,18 @@
 
     // ---------- Render ----------
     function optionsFor(it) {
-      if (it.techApproved === ISSUE) return [["leave", "Leave as is"], ["approve", "Approve"]];
-      return [["leave", "Leave as is"], ["issue", "Issue"], ["approve", "Approve"]];
+      if (it.techApproved === ISSUE) return [["approve", "Approve"]];
+      return [["issue", "Issue"], ["approve", "Approve"]];
+    }
+
+    function setCollapsed(item, id, on) {
+      collapsed[id] = on;
+      item.classList.toggle("collapsed", on);
+      var c = item.querySelector(".caret");
+      if (!c) return;
+      c.setAttribute("aria-expanded", on ? "false" : "true");
+      c.setAttribute("aria-label", on ? "Expand details" : "Collapse details");
+      c.title = on ? "Expand" : "Collapse";
     }
 
     function renderCard(it, readOnly) {
@@ -516,6 +580,23 @@
       tab.style.background = bg; tab.style.color = textOn(bg);
       tab.title = "Tech Approved: " + taText;
       item.appendChild(tab);
+
+      // Top-left: collapse/expand caret
+      // Interactive: every card. Read-only: only when Order Status is Reported.
+      var canCollapse = !readOnly || ((f[ORDER_STATUS_COL] || {}).text === REPORTED);
+      var body = el("div", "item-body");
+      body.id = "body_" + it.id;
+      if (canCollapse) {
+        // First render: Approved (disabled) cards start collapsed, all others expanded
+        if (!Object.prototype.hasOwnProperty.call(collapsed, it.id)) collapsed[it.id] = disabled;
+        item.classList.add("has-caret");
+        var caret = el("button", "caret", "\u25BE");
+        caret.type = "button";
+        caret.setAttribute("aria-controls", body.id);
+        caret.addEventListener("click", function () { setCollapsed(item, it.id, !collapsed[it.id]); });
+        item.appendChild(caret);
+        setCollapsed(item, it.id, !!collapsed[it.id]);
+      }
 
       // Header: item name (Tech Visit link, else monday item), Sold To, City, Paired with
       var head = el("div", "item-head");
@@ -547,7 +628,7 @@
           else d.appendChild(document.createTextNode(dash(x.text)));
           vals.appendChild(d);
         });
-        item.appendChild(vals);
+        body.appendChild(vals);
       });
 
       // Notes (full width)
@@ -556,8 +637,9 @@
         var d = el("div", "notes");
         d.appendChild(el("span", "label", x.title));
         d.appendChild(document.createTextNode(dash(x.text)));
-        item.appendChild(d);
+        body.appendChild(d);
       });
+      item.appendChild(body);
 
       // Choices or note
       if (readOnly) {
@@ -573,12 +655,20 @@
           var lab = el("label");
           var r = document.createElement("input");
           r.type = "radio"; r.name = "ch_" + it.id; r.value = o[0];
-          r.checked = (choices[it.id] || "leave") === o[0];
-          r.addEventListener("change", function () {
-            choices[it.id] = o[0];
+          r.checked = choices[it.id] === o[0];
+          // "click" (not "change"): tapping the option that is already selected clears it
+          r.addEventListener("click", function () {
+            if (choices[it.id] === o[0]) {
+              r.checked = false;
+              delete choices[it.id];
+            } else {
+              choices[it.id] = o[0];
+              if (o[0] === "approve" && canCollapse) setCollapsed(item, it.id, true);
+            }
             refreshChoiceStyles(ch);
             updateReviewBtn();
           });
+
           lab.appendChild(r); lab.appendChild(document.createTextNode(o[1]));
           ch.appendChild(lab);
         });
@@ -630,7 +720,9 @@
     }
     // Approve All: Not Yet items only (Issue items are not changed)
     function approveAll() {
-      available().forEach(function (it) { if (it.techApproved === NOT_YET) choices[it.id] = "approve"; });
+      available().forEach(function (it) {
+        if (it.techApproved === NOT_YET) { choices[it.id] = "approve"; collapsed[it.id] = true; }
+      });
       renderItems();
       updateReviewBtn();
     }
