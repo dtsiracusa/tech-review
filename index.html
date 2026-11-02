@@ -381,7 +381,7 @@
     var TA_COL = "color_mm8dp78e";             // Tech Approved (top-right tab)
     var SOLD_TO_COL = "text_mm1b4w1t";         // header
     var CITY_COL = "text_mm1dy2mz";            // header
-    var ORDER_STATUS_COL = "color_mm1vcdbq";   // read-only: caret shown only when this is REPORTED
+    var ORDER_STATUS_COL = "color_mm1vcdbq";   // read-only: REPORTED cards are greyed out and start collapsed
     var REPORTED = "Reported";
     // Field rows, top to bottom. Each row starts on a new line (2 per line on phones, 4 on wider screens).
     var ROWS = [
@@ -566,7 +566,10 @@
 
     function renderCard(it, readOnly) {
       var f = fieldMap(it);
-      var disabled = !readOnly && !!it.approved;
+      // Interactive: Approved items are greyed out. View-only: Order Status = Reported items are greyed out.
+      var disabled = readOnly
+        ? ((f[ORDER_STATUS_COL] || {}).text === REPORTED)
+        : !!it.approved;
       var item = el("div", "item" + (disabled ? " disabled" : ""));
       if (validHex(it.colorStatusColor)) item.style.setProperty("--gc", it.colorStatusColor);
 
@@ -581,22 +584,18 @@
       tab.title = "Tech Approved: " + taText;
       item.appendChild(tab);
 
-      // Top-left: collapse/expand caret
-      // Interactive: every card. Read-only: only when Order Status is Reported.
-      var canCollapse = !readOnly || ((f[ORDER_STATUS_COL] || {}).text === REPORTED);
+      // Top-left: collapse/expand caret (every card, both windows)
       var body = el("div", "item-body");
       body.id = "body_" + it.id;
-      if (canCollapse) {
-        // First render: Approved (disabled) cards start collapsed, all others expanded
-        if (!Object.prototype.hasOwnProperty.call(collapsed, it.id)) collapsed[it.id] = disabled;
-        item.classList.add("has-caret");
-        var caret = el("button", "caret", "\u25BE");
-        caret.type = "button";
-        caret.setAttribute("aria-controls", body.id);
-        caret.addEventListener("click", function () { setCollapsed(item, it.id, !collapsed[it.id]); });
-        item.appendChild(caret);
-        setCollapsed(item, it.id, !!collapsed[it.id]);
-      }
+      // First render: greyed-out (disabled) cards start collapsed, all others expanded
+      if (!Object.prototype.hasOwnProperty.call(collapsed, it.id)) collapsed[it.id] = disabled;
+      item.classList.add("has-caret");
+      var caret = el("button", "caret", "\u25BE");
+      caret.type = "button";
+      caret.setAttribute("aria-controls", body.id);
+      caret.addEventListener("click", function () { setCollapsed(item, it.id, !collapsed[it.id]); });
+      item.appendChild(caret);
+      setCollapsed(item, it.id, !!collapsed[it.id]);
 
       // Header: item name (Tech Visit link, else monday item), Sold To, City, Paired with
       var head = el("div", "item-head");
@@ -663,7 +662,7 @@
               delete choices[it.id];
             } else {
               choices[it.id] = o[0];
-              if (o[0] === "approve" && canCollapse) setCollapsed(item, it.id, true);
+                if (o[0] === "approve") setCollapsed(item, it.id, true);
             }
             refreshChoiceStyles(ch);
             updateReviewBtn();
