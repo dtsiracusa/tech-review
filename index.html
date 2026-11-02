@@ -129,10 +129,20 @@
       border-radius: 6px;
       background: transparent;
       color: #616161;
-      font-size: 18px;
-      line-height: 28px;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       transition: transform .15s;
+    }
+    .caret::before {
+      content: "";
+      display: block;
+      width: 8px;
+      height: 8px;
+      border-right: 2px solid currentColor;
+      border-bottom: 2px solid currentColor;
+      transform: translateY(-2px) rotate(45deg);
     }
     .caret:hover {
       background: #eeeeee;
@@ -283,10 +293,19 @@
         font-size: calc(17 * var(--u));
       }
       .caret {
-        width: calc(28 * var(--u));
-        height: calc(28 * var(--u));
-        line-height: calc(28 * var(--u));
-        font-size: calc(18 * var(--u));
+        top: calc(30 * var(--u));
+        left: 4px;
+        width: calc(34 * var(--u));
+        height: calc(34 * var(--u));
+      }
+      .caret::before {
+        width: calc(10 * var(--u));
+        height: calc(10 * var(--u));
+        border-right-width: calc(2.5 * var(--u));
+        border-bottom-width: calc(2.5 * var(--u));
+      }
+      .item.has-caret .item-head {
+        padding-left: calc(28 * var(--u));
       }
 
       .label { font-size: calc(11 * var(--u)); }
@@ -590,7 +609,7 @@
       // First render: greyed-out (disabled) cards start collapsed, all others expanded
       if (!Object.prototype.hasOwnProperty.call(collapsed, it.id)) collapsed[it.id] = disabled;
       item.classList.add("has-caret");
-      var caret = el("button", "caret", "\u25BE");
+      var caret = el("button", "caret");
       caret.type = "button";
       caret.setAttribute("aria-controls", body.id);
       caret.addEventListener("click", function () { setCollapsed(item, it.id, !collapsed[it.id]); });
