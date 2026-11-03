@@ -77,7 +77,22 @@
       flex-wrap: wrap;
       font-size: 14px;
     }
-    .toolbar strong { color: #212121; }
+    .toolbar strong {
+      color: #212121;
+    }
+    .tb-left {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px 16px;
+    }
+    .btn-sm {
+      padding: 6px 14px;
+      font-size: 14px;
+    }
+    #toggleAllBtn {
+      margin-left: auto;   /* stays on the right, also when the toolbar wraps */
+    }
     .counts { font-size: 14px; color: #555; margin: 8px 0 12px; }
     .item {
       border: 1px solid #e0e0e0;
@@ -256,7 +271,21 @@
       font-weight: 700;
       color: #212121;
     }
-    .section-head:first-child { border-top: none; margin-top: 0; padding-top: 0; }
+    .section-head:first-child {
+      border-top: none;
+      margin-top: 0;
+      padding-top: 0;
+    }
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .section-head .btn-sm {
+      font-weight: 400;
+    }
     .paired { font-size: 14px; margin-top: 2px; }
     .banner {
       background: #fff8e1;
@@ -305,9 +334,7 @@
         border-right-width: calc(2.5 * var(--u));
         border-bottom-width: calc(2.5 * var(--u));
       }
-      .item.has-caret .item-head {
-        padding-left: calc(28 * var(--u));
-      }
+      .item.has-caret .item-head {padding-left: calc(28 * var(--u));}
 
       .label { font-size: calc(11 * var(--u)); }
       .chip { font-size: calc(12 * var(--u)); }
@@ -321,7 +348,8 @@
       .modal-body { font-size: calc(14 * var(--u)); }
       .modal-footer .btn { font-size: calc(15 * var(--u)); }
       .section-head { font-size: calc(18 * var(--u)); }
-      .banner { font-size: calc(14 * var(--u)); }
+      .banner {font-size: calc(14 * var(--u)); }
+      .btn-sm {font-size: calc(14 * var(--u)); }
     }
     @media (min-width: 700px) {
       body { padding: 24px 0; }
@@ -361,8 +389,11 @@
       <div id="review" class="hidden">
         <div class="banner hidden" id="banner" aria-live="polite"></div>
         <div class="toolbar">
-          <div>Tech: <strong id="techName"></strong></div>
-          <div id="weekOfBox">Week of: <strong id="weekOf"></strong></div>
+          <div class="tb-left">
+            <div>Tech: <strong id="techName"></strong></div>
+            <div id="weekOfBox">Week of: <strong id="weekOf"></strong></div>
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" id="toggleAllBtn" aria-controls="itemList">Collapse All</button>
         </div>
         <p class="counts" id="counts" aria-live="polite"></p>
         <div id="itemList"></div>
@@ -597,15 +628,44 @@
       c.setAttribute("aria-expanded", on ? "false" : "true");
       c.setAttribute("aria-label", on ? "Expand details" : "Collapse details");
       c.title = on ? "Expand" : "Collapse";
+      refreshToggles();
+    }
+    // ---------- Collapse All / Expand All ----------
+    // sec undefined = every card on the page; otherwise only the cards in that view-only section
+    function cardsIn(sec) {
+      var sel = sec === undefined ? ".item" : '.item[data-sec="' + sec + '"]';
+      return Array.prototype.slice.call($("itemList").querySelectorAll(sel));
+    }
+    function anyExpanded(cards) {
+      return cards.some(function (c) { return !collapsed[c.getAttribute("data-id")]; });
+    }
+    function setToggleLabel(btn, cards) {
+      if (!btn) return;
+      btn.textContent = anyExpanded(cards) ? "Collapse All" : "Expand All";
+      btn.disabled = cards.length === 0;
+    }
+    function refreshToggles() {
+      setToggleLabel($("toggleAllBtn"), cardsIn());
+      Array.prototype.forEach.call($("itemList").querySelectorAll(".sec-toggle"), function (b) {
+        setToggleLabel(b, cardsIn(b.getAttribute("data-sec")));
+      });
+    }
+    function toggleCards(sec) {
+      var cards = cardsIn(sec);
+      var collapse = anyExpanded(cards);   // any open -> collapse all; all closed -> expand all
+      cards.forEach(function (c) { setCollapsed(c, c.getAttribute("data-id"), collapse); });
+      refreshToggles();
     }
 
-    function renderCard(it, readOnly) {
+    function renderCard(it, readOnly, sec) {
       var f = fieldMap(it);
       // Interactive: Approved items are greyed out. View-only: Order Status = Reported items are greyed out.
       var disabled = readOnly
         ? ((f[ORDER_STATUS_COL] || {}).text === REPORTED)
         : !!it.approved;
       var item = el("div", "item" + (disabled ? " disabled" : ""));
+      item.setAttribute("data-id", it.id);
+      if (sec !== undefined) item.setAttribute("data-sec", sec);
       if (validHex(it.colorStatusColor)) item.style.setProperty("--gc", it.colorStatusColor);
 
       // Top-right: Tech Approved tab
@@ -723,17 +783,28 @@
       list.textContent = "";
       data.items.forEach(function (it) { list.appendChild(renderCard(it, false)); });
       updateCounts();
+      refreshToggles();
     }
 
     // Read-only: one section per group, thick line + header between them
     function renderSections() {
       var list = $("itemList");
       list.textContent = "";
-      data.sections.forEach(function (s) {
-        list.appendChild(el("h2", "section-head", s.title + " (" + s.items.length + ")"));
+      data.sections.forEach(function (s, si) {
+        // list.appendChild(el("h2", "section-head", s.title + " (" + s.items.length + ")"));
+        var h = el("h2", "section-head");
+        h.appendChild(el("span", null, s.title + " (" + s.items.length + ")"));
+        var tb = el("button", "btn btn-outline btn-sm sec-toggle", "Collapse All");
+        tb.type = "button";
+        tb.setAttribute("data-sec", si);
+        tb.setAttribute("aria-label", "Collapse or expand all cards in " + s.title);
+        tb.addEventListener("click", function () { toggleCards(String(si)); });
+        h.appendChild(tb);
+        list.appendChild(h);
         if (!s.items.length) list.appendChild(el("p", "note", "No jobs."));
-        s.items.forEach(function (it) { list.appendChild(renderCard(it, true)); });
+        s.items.forEach(function (it) { list.appendChild(renderCard(it, true, si)); });
       });
+      refreshToggles();
     }
 
     function refreshChoiceStyles(ch) {
@@ -829,6 +900,7 @@
     // ---------- Init ----------
     (function init() {
       $("approveAllBtn").addEventListener("click", approveAll);
+      $("toggleAllBtn").addEventListener("click", function () {toggleCards(); });
       $("reviewBtn").addEventListener("click", openConfirm);
       $("cancelBtn").addEventListener("click", closeConfirm);
       $("submitBtn").addEventListener("click", submit);
