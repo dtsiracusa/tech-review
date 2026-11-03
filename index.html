@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='3' r='2' fill='%231a56db'/><rect x='6' y='6.5' width='4' height='9' rx='1' fill='%231a56db'/></svg>">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="text-scale" content="scale">
@@ -393,7 +394,8 @@
             <div>Tech: <strong id="techName"></strong></div>
             <div id="weekOfBox">Week of: <strong id="weekOf"></strong></div>
           </div>
-          <button type="button" class="btn btn-outline btn-sm" id="toggleAllBtn" aria-controls="itemList">Collapse All</button>
+            <!-- <button type="button" class="btn btn-outline btn-sm" id="toggleAllBtn" aria-controls="itemList">Collapse All</button> -->
+            <!-- Created by ensureToggleAllBtn() in the interactive phase only -->
         </div>
         <p class="counts" id="counts" aria-live="polite"></p>
         <div id="itemList"></div>
@@ -650,6 +652,16 @@
         setToggleLabel(b, cardsIn(b.getAttribute("data-sec")));
       });
     }
+    // Builds the toolbar Collapse All / Expand All button (interactive phase only). Runs once.
+    function ensureToggleAllBtn() {
+      if ($("toggleAllBtn")) return;
+      var b = el("button", "btn btn-outline btn-sm", "Collapse All");
+      b.type = "button";
+      b.id = "toggleAllBtn";
+      b.setAttribute("aria-controls", "itemList");
+      b.addEventListener("click", function () { toggleCards(); });
+      document.querySelector(".toolbar").appendChild(b);
+    }
     function toggleCards(sec) {
       var cards = cardsIn(sec);
       var collapse = anyExpanded(cards);   // any open -> collapse all; all closed -> expand all
@@ -783,6 +795,7 @@
       list.textContent = "";
       data.items.forEach(function (it) { list.appendChild(renderCard(it, false)); });
       updateCounts();
+      ensureToggleAllBtn();
       refreshToggles();
     }
 
@@ -900,7 +913,7 @@
     // ---------- Init ----------
     (function init() {
       $("approveAllBtn").addEventListener("click", approveAll);
-      $("toggleAllBtn").addEventListener("click", function () {toggleCards(); });
+// $("toggleAllBtn").addEventListener("click", function () { toggleCards(); });   // wired in ensureToggleAllBtn()
       $("reviewBtn").addEventListener("click", openConfirm);
       $("cancelBtn").addEventListener("click", closeConfirm);
       $("submitBtn").addEventListener("click", submit);
