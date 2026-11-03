@@ -664,7 +664,7 @@
           }
           else if (x.type === "link" && x.url) d.appendChild(link(x.text || x.url, x.url));
           else if (x.type === "phone") d.appendChild(phoneNode(x.text));
-          else if (MAPS_COLS.indexOf(id) !== -1) d.appendChild(mapNode(x.text)); 
+          else if (MAP_COLS.indexOf(id) !== -1) d.appendChild(mapNode(x.text)); 
           else d.appendChild(document.createTextNode(dash(x.text)));
           vals.appendChild(d);
         });
