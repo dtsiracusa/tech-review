@@ -517,7 +517,7 @@
     function mapNode(t) {
       var raw = String(t || "").trim();
       if(!raw) return document.createTextNode("-");
-      return link(raw, "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponenent(raw));
+      return link(raw, "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(raw));
     }
 
     // ---------- Load ----------
