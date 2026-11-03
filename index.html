@@ -441,8 +441,8 @@
       ["date_mm07cg6e", "text_mm0ghcqd"],
       ["color_mm1jzrpg", "color_mm25pxwa", "text_mm1z93ap", "text_mm25mb67"],
       // ["location_mkzv8fpv"],   // old Ship to Address (location column); replaced by the three rows below
-      ["text_mm7w56zq", "text_mm8q43y4"],   // Ship to Name, Ship to Address
       ["text_mm8qyagk", "text_mm8akceq"],   // End-User Name, End-User Address
+      ["text_mm7w56zq", "text_mm8q43y4"],   // Ship to Name, Ship to Address
       ["text_mm8qd335", "text_mm8qqd65"],   // Units Location, Units Address
       ["text_mm2d9dby", "phone_mm2cz2nr", "text_mm6bsqmj", "phone_mm2esv7g", "text_mm6dtr7m", "phone_mm6dsdnq"]
     ];
@@ -451,8 +451,23 @@
     // Address columns that link to a map search
     var MAP_COLS = ["text_mm8q43y4", "text_mm8akceq", "text_mm8qqd65"];
     // A row is hidden when every field in it is blank AND every field in it is in this list.
-    // Add the IDs of more rows here to hide them when they are blank.
-    var HIDE_IF_BLANK = ["text_mm8qd335", "text_mm8qqd65"];
+    // Add all column IDs from a row here when the entire row should disappear if blank.
+    var HIDE_ROW_IF_BLANK = [
+      "text_mm7w56zq", "text_mm8q43y4",   // Ship to Name, Ship to Address
+      "text_mm8qyagk", "text_mm8akceq",   // End-User Name, End-User Address
+      "text_mm8qd335", "text_mm8qqd65"    // Units Location, Units Address
+    ];
+    
+    // Individual fields in this list are hidden when blank.
+    // Other fields in the same row remain visible.
+    var HIDE_FIELD_IF_BLANK = [
+      "text_mm1z93ap",  // Tracking #
+      "text_mm25mb67",  // Pro #
+      "text_mm6dtr7m",  // Backup On-Site Contact Name
+      "phone_mm6dsdnq", // Backup On-Site Contact Phone #
+      "text_mkzvy6d3",  // Additional Notes for Techs
+      "text_mm8q43y4",  // Ship to Address (text)
+    ];
     var NOTE_COLS = ["text_mkzvy6d3", "long_text_mm2cz7x7", "long_text_mm1tfndn"];
 
     var APPROVED = "Approved", ISSUE = "Issue", NOT_YET = "Not Yet";
@@ -719,14 +734,22 @@
 
       // Field rows
       ROWS.forEach(function (row) {
-        // Skip the row when every field is blank and every field is in HIDE_IF_BLANK
+        // Skip the row when every field is blank and every field is in HIDE_ROW_IF_BLANK
         var skip = row.every(function (id) {
-          return HIDE_IF_BLANK.indexOf(id) !== -1 && !(f[id] && String(f[id].text || "").trim());
+          return HIDE_ROW_IF_BLANK.indexOf(id) !== -1 &&
+            !(f[id] && String(f[id].text || "").trim());
         });
         if (skip) return;
         var vals = el("div", "vals");
         row.forEach(function (id) {
           var x = f[id]; if (!x) return;
+        
+          // Skip this individual field when it is configured to hide if blank.
+          if (
+            HIDE_FIELD_IF_BLANK.indexOf(id) !== -1 &&
+            !String(x.text || "").trim()
+          ) return;
+        
           var d = el("div", WIDE_COLS.indexOf(id) !== -1 ? "wide" : "");
           d.appendChild(el("span", "label", x.title));
           if (x.type === "status") {
