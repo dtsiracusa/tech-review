@@ -438,8 +438,8 @@
     var REPORTED = "Reported";
     // Field rows, top to bottom. Each row starts on a new line (2 per line on phones, 4 on wider screens).
     var ROWS = [
-      ["date_mm07cg6e", "text_mm0ghcqd"],
-      ["color_mm1jzrpg", "color_mm25pxwa", "text_mm1z93ap", "text_mm25mb67"],
+      ["date_mm07cg6e", "text_mm0ghcqd"], // Scheduled Date/Time, Products to be worked on
+      ["color_mm1jzrpg", "color_mm25pxwa", "text_mm1z93ap", "text_mm25mb67"], // Parts Ready, Carrier, Tracking #, Pro #
       // ["location_mkzv8fpv"],   // old Ship to Address (location column); replaced by the three rows below
       ["text_mm8qyagk", "text_mm8akceq"],   // End-User Name, End-User Address
       ["text_mm7w56zq", "text_mm8q43y4"],   // Ship to Name, Ship to Address
@@ -467,6 +467,8 @@
       "phone_mm6dsdnq", // Backup On-Site Contact Phone #
       "text_mkzvy6d3",  // Additional Notes for Techs
       "text_mm8q43y4",  // Ship to Address (text)
+      "text_mm6bsqmj",  // On-Site Contact Name
+      "phone_mm2esv7g", // On-Site Contact Phone #
       "email_mm6br3kz", // On-Site Contact Email
     ];
     var NOTE_COLS = ["text_mkzvy6d3", "long_text_mm2cz7x7", "long_text_mm1tfndn"];
