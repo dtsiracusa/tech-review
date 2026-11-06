@@ -782,6 +782,11 @@
       // Notes (full width)
       NOTE_COLS.forEach(function (id) {
         var x = f[id]; if (!x) return;
+        // Skip this note when it's configured to hide if blank.
+        if (
+          HIDE_FIELD_IF_BLANK.indexOf(id) !== -1 &&
+          !String(x.text || "").trim()
+        ) return;
         var d = el("div", "notes");
         d.appendChild(el("span", "label", x.title));
         d.appendChild(document.createTextNode(dash(x.text)));
