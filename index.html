@@ -134,6 +134,17 @@
     .item-name a {
       color: inherit;
     }
+    .nv-icon {
+      width: 1em;
+      height: 1em;
+      margin-left: 6px;
+      vertical-align: -0.125em;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
     .caret {
       position: absolute;
       top: 4px;
@@ -427,6 +438,8 @@
     var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz50CyFp7_A2fWJkc7Ozt6hu1P_NtpawArC-xUhF23vkKSl601wZxFXbcLlUoXK0WbzrQ/exec";
     var LOAD_TIMEOUT_MS = 60000;
     var SUBMIT_TIMEOUT_MS = 180000;
+    // Item name links here when the Tech Visit column is blank (replaces the monday item link)
+    var NEW_VISIT_URL = "https://apps.saudermfg.com/Warranty/Claim/New";
 
     // Column placement on the card (IDs from tech_columns.txt)
     var COLOR_COL = "color_mkzwg28s";          // left border
@@ -580,7 +593,25 @@
       if(!raw) return document.createTextNode("-");
       return link(raw, "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(raw));
     }
-
+    // Doc-with-plus icon for cards that link to New Tech Visit (Tech Visit column is blank)
+    function newVisitIcon() {
+      var NS = "http://www.w3.org/2000/svg";
+      var svg = document.createElementNS(NS, "svg");
+      svg.setAttribute("viewBox", "0 0 16 16");
+      svg.setAttribute("class", "nv-icon");
+      svg.setAttribute("aria-hidden", "true");
+      svg.setAttribute("focusable", "false");
+      [
+        "M3.5 1.5h6l3 3v10h-9z",   // page outline
+        "M9.5 1.5v3h3",            // folded corner
+        "M8 7.5v5M5.5 10h5"        // plus sign
+      ].forEach(function (d) {
+        var p = document.createElementNS(NS, "path");
+        p.setAttribute("d", d);
+        svg.appendChild(p);
+      });
+      return svg;
+    }
     // ---------- Load ----------
     function load() {
       if (APPS_SCRIPT_URL.indexOf("PASTE") === 0) {
@@ -614,7 +645,8 @@
         $("approveAllBtn").classList.add("hidden");
         $("banner").textContent = "View only \u2014 the next review opens " + res.nextOpenText + ".";
         $("banner").classList.remove("hidden");
-        setState("info", "\u2139", "Tech Review", "");
+        // setState("info", "\u2139", "Tech Review", "");
+        setState("info", "\u2139", "Schedule", "");
         $("counts").textContent = res.sections.map(function (s) {
           return s.items.length + " job(s) in " + s.title;
         }).join(", ") + ".";
@@ -735,8 +767,13 @@
       // Header: item name (Tech Visit link, else monday item), Sold To, City, Paired with
       var head = el("div", "item-head");
       var n = el("div", "item-name");
-      n.appendChild(link(it.name, it.visitUrl || it.url));
-      n.title = it.visitUrl ? "Open Tech Visit" : "Open in monday";
+      // n.appendChild(link(it.name, it.visitUrl || it.url));
+      // n.title = it.visitUrl ? "Open Tech Visit" : "Open in monday";
+      // Tech Visit link first; if blank, New Tech Visit with a doc-plus icon inside the same link (clickable)
+      var nameLink = link(it.name, it.visitUrl || NEW_VISIT_URL);
+      if (!it.visitUrl) nameLink.appendChild(newVisitIcon());
+      n.appendChild(nameLink);
+      n.title = it.visitUrl ? "Open Tech Visit" : "Create New Tech Visit";
       head.appendChild(n);
       head.appendChild(el("div", "soldto", dash(f[SOLD_TO_COL] && f[SOLD_TO_COL].text)));
       head.appendChild(el("div", "city", dash(f[CITY_COL] && f[CITY_COL].text)));
